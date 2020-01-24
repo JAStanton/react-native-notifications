@@ -8,11 +8,28 @@
 #import <React/RCTBridgeModule.h>
 #endif
 
+#if __has_include(<React/RCTConvert.h>)
+#import <React/RCTConvert.h>
+#elif __has_include("React/RCTConvert.h")
+#import "React/RCTConvert.h"
+#else
+#import "RCTConvert.h"
+#endif
+
+@interface RCTConvert (UILocalNotification)
++ (UILocalNotification *)UILocalNotification:(id)json;
+@end
+
+@interface RCTConvert (UIBackgroundFetchResult)
++(UIBackgroundFetchResult *)UIBackgroundFetchResult:(id)json;
+@end
+
 @interface RNNotifications : NSObject <RCTBridgeModule>
 
 typedef void (^RCTRemoteNotificationCallback)(UIBackgroundFetchResult result);
 
 + (void)didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken;
++ (void)didFailToRegisterForRemoteNotificationsWithError:(NSError *)error;
 + (void)didRegisterUserNotificationSettings:(UIUserNotificationSettings *)notificationSettings;
 + (void)didUpdatePushCredentials:(PKPushCredentials *)credentials forType:(NSString *)type;
 

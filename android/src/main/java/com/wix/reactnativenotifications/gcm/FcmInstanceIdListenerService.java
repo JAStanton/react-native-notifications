@@ -4,21 +4,34 @@ import android.os.Bundle;
 import android.util.Log;
 import org.json.*;
 
-import com.google.android.gms.gcm.GcmListenerService;
+import com.facebook.common.logging.FLog;
+import com.google.firebase.messaging.FirebaseMessagingService;
+import com.google.firebase.messaging.RemoteMessage;
 import com.wix.reactnativenotifications.core.notification.IPushNotification;
 import com.wix.reactnativenotifications.core.notification.PushNotification;
 
+import java.util.Map;
+
 import static com.wix.reactnativenotifications.Defs.LOGTAG;
 
-public class GcmMessageHandlerService extends GcmListenerService {
+/**
+ * Instance-ID + token refreshing handling service. Contacts the GCM to fetch the updated token.
+ *
+ * @author amitd
+ */
+public class FcmInstanceIdListenerService extends FirebaseMessagingService {
+
+    private final static String LOG_TAG = "GcmMessageHandlerService";
 
     @Override
-    public void onMessageReceived(String s, Bundle bundle) {
+    public void onMessageReceived(RemoteMessage message){
+        Map messageData = message.getData();
+        Bundle bundle = convertMapToBundle(messageData);
         Log.d(LOGTAG, "New message from GCM: " + bundle);
-        String rawData = bundle.getString("data");
         // Hack by Convoy, all of our data is nested in "data" json. We need to bring it up a level.
         // we could change this in API but it's backwards incompatible with current app to do so.
-        if (rawData.length() > 0) {
+        String rawData = bundle.getString("data");
+        if (rawData != null && rawData.length() > 0) {
             try {
                 JSONObject data = new JSONObject(rawData);
                 try {
@@ -72,6 +85,8 @@ public class GcmMessageHandlerService extends GcmListenerService {
             } catch (JSONException ignored) {
                 Log.d(LOGTAG, "Failed to parse raw data");
             }
+        } else {
+            FLog.i(LOG_TAG, "rawData doesn't contain data key or data is empty: " + bundle);
         }
 
         try {
@@ -80,6 +95,17 @@ public class GcmMessageHandlerService extends GcmListenerService {
         } catch (IPushNotification.InvalidNotificationException e) {
             // A GCM message, yes - but not the kind we know how to work with.
             Log.v(LOGTAG, "GCM message handling aborted", e);
+            FLog.i(LOG_TAG, "GCM message handling aborted: " + bundle);
         }
     }
+
+    private Bundle convertMapToBundle(Map<String, String> map) {
+        Bundle bundle = new Bundle();
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            bundle.putString(entry.getKey(), entry.getValue());
+        }
+
+        return bundle;
+    }
+
 }

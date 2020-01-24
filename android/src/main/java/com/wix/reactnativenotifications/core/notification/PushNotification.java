@@ -28,6 +28,7 @@ import com.wix.reactnativenotifications.core.ProxyService;
 
 import static com.wix.reactnativenotifications.Defs.NOTIFICATION_OPENED_EVENT_NAME;
 import static com.wix.reactnativenotifications.Defs.NOTIFICATION_RECEIVED_EVENT_NAME;
+import static com.wix.reactnativenotifications.Defs.NOTIFICATION_RECEIVED_FOREGROUND_EVENT_NAME;
 
 public class PushNotification implements IPushNotification {
 
@@ -79,12 +80,14 @@ public class PushNotification implements IPushNotification {
             postNotification(notificationId);
         }
         notifyReceivedToJS();
+        if (mAppLifecycleFacade.isAppVisible()) {
+            notifiyReceivedForegroundNotificationToJS();
+        }
     }
 
     @Override
     public void onOpened() {
         digestNotification();
-        clearAllNotifications();
     }
 
     @Override
@@ -198,23 +201,25 @@ public class PushNotification implements IPushNotification {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             notificationBuilder = new Notification.Builder(mContext);
         } else {
+            createNotificationChannel(); // Must happen before notifying system of notification.
             notificationBuilder = new Notification.Builder(mContext, mNotificationProps.getChannelId());
         }
 
         notificationBuilder.setContentTitle(title)
             .setContentText(mNotificationProps.getBody())
+            .setStyle(new Notification.BigTextStyle()
+                .bigText(mNotificationProps.getBody()))
             .setPriority(mNotificationProps.getPriority())
             .setContentIntent(intent)
             .setVibrate(mNotificationProps.getVibrationPattern())
             .setSmallIcon(smallIconResId)
+            .setShowWhen(true)
             .setAutoCancel(true);
 
         int badge = mNotificationProps.getBadge();
         if (badge >= 0) {
             notificationBuilder.setNumber(badge);
         }
-
-        createNotificationChannel(); // Must happen before notifying system of notification.
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             notificationBuilder.setColor(Color.parseColor("#f65335"));
@@ -305,11 +310,15 @@ public class PushNotification implements IPushNotification {
     }
 
     private void notifyReceivedToJS() {
-        mJsIOHelper.sendEventToJS(NOTIFICATION_RECEIVED_EVENT_NAME, mNotificationProps.asBundle(), mAppLifecycleFacade.getRunningReactContext());
+        mJsIOHelper.sendEventToJS(NOTIFICATION_RECEIVED_EVENT_NAME, mNotificationProps.asBundle(), mAppLifecycleFacade);
+    }
+
+    private void notifiyReceivedForegroundNotificationToJS() {
+        mJsIOHelper.sendEventToJS(NOTIFICATION_RECEIVED_FOREGROUND_EVENT_NAME, mNotificationProps.asBundle(), mAppLifecycleFacade);
     }
 
     private void notifyOpenedToJS() {
-        mJsIOHelper.sendEventToJS(NOTIFICATION_OPENED_EVENT_NAME, mNotificationProps.asBundle(), mAppLifecycleFacade.getRunningReactContext());
+        mJsIOHelper.sendEventToJS(NOTIFICATION_OPENED_EVENT_NAME, mNotificationProps.asBundle(), mAppLifecycleFacade);
     }
 
     protected void launchOrResumeApp() {

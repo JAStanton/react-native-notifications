@@ -3,7 +3,6 @@ package com.wix.reactnativenotifications;
 import android.app.Application;
 
 import com.facebook.react.ReactPackage;
-import com.facebook.react.bridge.JavaScriptModule;
 import com.facebook.react.bridge.NativeModule;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.uimanager.ViewManager;
@@ -14,21 +13,20 @@ import java.util.List;
 
 public class RNNotificationsPackage implements ReactPackage {
 
-
-    final Application mApplication;
+    private final Application mApplication;
+    private RNNotificationsNativeCallback mNativeCallback;
 
     public RNNotificationsPackage(Application application) {
         mApplication = application;
     }
 
-    @Override
-    public List<NativeModule> createNativeModules(ReactApplicationContext reactContext) {
-        return Arrays.<NativeModule>asList(new RNNotificationsModule(mApplication, reactContext));
+    public void addNativeCallback(RNNotificationsNativeCallback rnNotificationsNativeCallback) {
+        mNativeCallback = rnNotificationsNativeCallback;
     }
 
-    // Deprecated RN 0.47
-    public List<Class<? extends JavaScriptModule>> createJSModules() {
-        return Collections.emptyList();
+    @Override
+    public List<NativeModule> createNativeModules(ReactApplicationContext reactContext) {
+        return Arrays.<NativeModule>asList(new RNNotificationsModule(mApplication, mNativeCallback, reactContext));
     }
 
     @Override
